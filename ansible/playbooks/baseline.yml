@@ -1,0 +1,7 @@
+
+- name: Configure Linux baseline
+  hosts: management
+  become: true
+
+  roles:
+    - common

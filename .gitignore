@@ -1,0 +1,32 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+crash.log
+crash.*.log
+*.tfvars
+
+# Secrets / credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*.secret
+.env
+.env.*
+
+# Ansible
+*.retry
+
+# SSH
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
