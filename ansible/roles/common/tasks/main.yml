@@ -16,6 +16,7 @@
       - htop
       - jq
       - chrony
+      - qemu-guest-agent
     state: present
   become: true
 
@@ -26,3 +27,9 @@
     enabled: true
   become: true
 
+- name: Ensure QEMU Guest Agent is enabled and running
+  ansible.builtin.systemd:
+    name: qemu-guest-agent
+    state: started
+    enabled: true
+  become: true
