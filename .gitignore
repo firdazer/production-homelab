@@ -5,7 +5,9 @@
 crash.log
 crash.*.log
 *.tfvars
-
+# Terraform generated plan files
+*.tfplan
+tfplan
 # Secrets / credentials
 *.pem
 *.key
