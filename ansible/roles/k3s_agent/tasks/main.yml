@@ -1,0 +1,125 @@
+---
+- name: Verify K3s worker node address
+  ansible.builtin.assert:
+    that:
+      - ansible_default_ipv4.address == "192.168.100.32"
+    fail_msg: "Worker IP address does not match 192.168.100.32"
+
+- name: Check whether K3s agent is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_agent_binary
+
+- name: Report K3s agent installation status
+  ansible.builtin.debug:
+    msg: "K3s binary present: {{ k3s_agent_binary.stat.exists }}"
+
+- name: Check Kubernetes API connectivity
+  ansible.builtin.wait_for:
+    host: 192.168.100.31
+    port: 6443
+    timeout: 10
+    state: started
+- name: Download K3s AMD64 checksums
+  ansible.builtin.get_url:
+    url: "https://github.com/k3s-io/k3s/releases/download/{{ k3s_version | urlencode }}/sha256sum-amd64.txt"
+    dest: /usr/local/src/k3s-sha256sum-amd64.txt
+    mode: "0644"
+
+- name: Read official K3s checksums
+  ansible.builtin.slurp:
+    src: /usr/local/src/k3s-sha256sum-amd64.txt
+  register: k3s_agent_checksums
+
+- name: Extract K3s binary checksum
+  ansible.builtin.set_fact:
+    k3s_agent_sha256: >-
+      {{
+        (
+          k3s_agent_checksums.content
+          | b64decode
+          | regex_findall('(?m)^([a-fA-F0-9]{64})\s+\*?k3s\s*$')
+        ) | first | default('')
+      }}
+
+- name: Verify K3s checksum exists
+  ansible.builtin.assert:
+    that:
+      - k3s_agent_sha256 | length == 64
+    fail_msg: "K3s checksum not found. Installation stopped."
+
+- name: Download verified K3s binary
+  ansible.builtin.get_url:
+    url: "https://github.com/k3s-io/k3s/releases/download/{{ k3s_version | urlencode }}/k3s"
+    dest: /usr/local/src/k3s-verified
+    checksum: "sha256:{{ k3s_agent_sha256 }}"
+    mode: "0755"
+
+- name: Install verified K3s binary
+  ansible.builtin.copy:
+    src: /usr/local/src/k3s-verified
+    dest: /usr/local/bin/k3s
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Read cluster join token securely
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  delegate_to: k3s-cp01
+  become: true
+  register: k3s_join_token
+  no_log: true
+
+- name: Create K3s agent configuration directory
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Configure K3s worker
+  ansible.builtin.copy:
+    dest: /etc/rancher/k3s/config.yaml
+    owner: root
+    group: root
+    mode: "0600"
+    content: |
+      server: "https://192.168.100.31:6443"
+      token: "{{ k3s_join_token.content | b64decode | trim }}"
+      node-ip: "192.168.100.32"
+  no_log: true
+
+- name: Create K3s agent systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/k3s-agent.service
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=K3s Kubernetes Agent
+      Wants=network-online.target
+      After=network-online.target
+
+      [Service]
+      Type=exec
+      ExecStart=/usr/local/bin/k3s agent
+      KillMode=process
+      Delegate=yes
+      Restart=always
+      RestartSec=5s
+      LimitNOFILE=1048576
+      TasksMax=infinity
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Enable and start K3s worker
+  ansible.builtin.systemd_service:
+    name: k3s-agent
+    daemon_reload: true
+    enabled: true
+    state: started

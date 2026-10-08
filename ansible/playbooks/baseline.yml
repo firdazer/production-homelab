@@ -1,6 +1,6 @@
 ---
 - name: Configure Linux baseline
-  hosts: management:managed_servers
+  hosts: all
   become: true
 
   roles:
