@@ -1,0 +1,59 @@
+name: Kubernetes CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "kubernetes/**"
+      - ".github/workflows/kubernetes-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "kubernetes/**"
+      - ".github/workflows/kubernetes-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Kubernetes manifests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install validation tools
+        run: |
+          python3 -m pip install --user --break-system-packages \
+            yamllint==1.37.1 \
+            PyYAML==6.0.2
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Check YAML syntax
+        run: |
+          yamllint -d '{extends: relaxed, rules: {line-length: disable}}' \
+            kubernetes/apps/web-demo/
+
+      - name: Check Kubernetes manifest structure
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          files = sorted(Path("kubernetes").rglob("*.yaml"))
+          files += sorted(Path("kubernetes").rglob("*.yml"))
+
+          assert files, "No Kubernetes manifests found"
+
+          for path in files:
+              for obj in yaml.safe_load_all(path.read_text()):
+                  if obj is None:
+                      continue
+                  for field in ("apiVersion", "kind", "metadata"):
+                      assert field in obj, f"{path}: missing {field}"
+                  print(f"PASS: {path} ({obj['kind']})")
+          PY
