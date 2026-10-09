@@ -15,7 +15,7 @@ spec:
       labels:
          app: web-demo
       annotations:
-        kubernetes.io/change-cause: "Rollback to Nginx 1.28.0 after upgrade test"
+        kubernetes.io/change-cause: "GitOps auto-sync test 01"
 
     spec:
       nodeSelector:
