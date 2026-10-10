@@ -53,7 +53,16 @@ jobs:
               for obj in yaml.safe_load_all(path.read_text()):
                   if obj is None:
                       continue
+
+                  if path.name in ("values.yaml", "values.yml"):
+                      assert isinstance(obj, dict), f"{path}: Helm values must be a mapping"
+                      print(f"PASS: {path} (Helm values)")
+                      continue
+
+                  assert isinstance(obj, dict), f"{path}: expected a mapping"
+
                   for field in ("apiVersion", "kind", "metadata"):
                       assert field in obj, f"{path}: missing {field}"
+
                   print(f"PASS: {path} ({obj['kind']})")
           PY
