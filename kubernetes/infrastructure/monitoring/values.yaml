@@ -1,0 +1,110 @@
+# Production-inspired homelab monitoring
+# Helm chart: kube-prometheus-stack 92.2.0
+
+fullnameOverride: monitoring
+
+alertmanager:
+  enabled: false
+
+grafana:
+  enabled: true
+
+  nodeSelector:
+    kubernetes.io/hostname: k3s-w01
+
+  service:
+    type: ClusterIP
+
+  persistence:
+    enabled: true
+    type: pvc
+    storageClassName: local-path
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 384Mi
+
+prometheusOperator:
+  nodeSelector:
+    kubernetes.io/hostname: k3s-w01
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 96Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+prometheus:
+  prometheusSpec:
+    nodeSelector:
+      kubernetes.io/hostname: k3s-w01
+
+    replicas: 1
+    retention: 7d
+    retentionSize: 2500MB
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 768Mi
+
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 3Gi
+
+kube-state-metrics:
+  nodeSelector:
+    kubernetes.io/hostname: k3s-w01
+
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 192Mi
+
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+# K3s-specific monitoring configuration.
+# These components are not exposed as standalone pods with
+# the selectors expected by kube-prometheus-stack.
+kubeScheduler:
+  enabled: false
+
+kubeControllerManager:
+  enabled: false
+
+kubeProxy:
+  enabled: false
+
+# Alertmanager is intentionally disabled to conserve resources.
+# Disable only the alert that expects an Alertmanager connection.
+defaultRules:
+  disabled:
+    PrometheusNotConnectedToAlertmanagers: true
