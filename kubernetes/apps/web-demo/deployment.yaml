@@ -22,7 +22,7 @@ spec:
         kubernetes.io/hostname: k3s-w01
       containers:
         - name: nginx
-          image: nginx:1.28.0
+          image: ghcr.io/firdazer/production-homelab:sha-5c63b44698170b2308f303d0305b952f906281bd
           ports:
             - containerPort: 80
           resources:
