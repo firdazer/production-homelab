@@ -38,6 +38,16 @@ jobs:
           yamllint -d '{extends: relaxed, rules: {line-length: disable}}' \
             kubernetes/apps/web-demo/
 
+      - name: Validate Kubernetes schemas with kubeconform
+        run: |
+          curl -fsSL -o /tmp/kubeconform.tar.gz \
+            https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          tar -xzf /tmp/kubeconform.tar.gz -C /tmp kubeconform
+          /tmp/kubeconform -strict -summary \
+            kubernetes/apps/web-demo/deployment.yaml \
+            kubernetes/apps/web-demo/networkpolicy.yaml \
+            kubernetes/apps/web-demo/service.yaml
+
       - name: Check Kubernetes manifest structure
         run: |
           python3 - <<'PY'
