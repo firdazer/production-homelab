@@ -33,7 +33,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-          image: ghcr.io/firdazer/production-homelab:sha-ce576329f940787b20673620a266c9453e566f67
+          image: ghcr.io/firdazer/production-homelab:sha-ba80294df1c52f1a31e2f8f3f3bf876d18f5405d
           ports:
             - containerPort: 8080
           resources:
