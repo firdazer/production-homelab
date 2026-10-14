@@ -37,11 +37,11 @@ jobs:
         run: |
           echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push image
+      - name: Build image for security scanning
         uses: docker/build-push-action@v6
         with:
           context: ./apps/web-demo
-          push: true
+          load: true
           tags: ${{ steps.image.outputs.name }}:sha-${{ github.sha }}
 
       - name: Install Trivy
@@ -53,3 +53,7 @@ jobs:
       - name: Scan container image with Trivy
         run: |
           /tmp/trivy-bin/trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 "${{ steps.image.outputs.name }}:sha-${{ github.sha }}"
+
+      - name: Publish scanned image to GHCR
+        run: |
+          docker push "${{ steps.image.outputs.name }}:sha-${{ github.sha }}"
