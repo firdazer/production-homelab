@@ -52,4 +52,4 @@ jobs:
 
       - name: Scan container image with Trivy
         run: |
-          /tmp/trivy-bin/trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 "${{ steps.image.outputs.name }}:sha-${{ github.sha }}"
+          /tmp/trivy-bin/trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 "${{ steps.image.outputs.name }}:sha-${{ github.sha }}"
