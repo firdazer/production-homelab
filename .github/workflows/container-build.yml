@@ -47,7 +47,7 @@ jobs:
       - name: Install Trivy
         run: |
           curl -fsSL https://raw.githubusercontent.com/aquasecurity/trivy/v0.65.0/contrib/install.sh -o /tmp/install-trivy.sh
-          bash /tmp/install-trivy.sh -b /tmp/trivy-bin v0.65.0
+          bash -x /tmp/install-trivy.sh -b /tmp/trivy-bin v0.65.0
           /tmp/trivy-bin/trivy --version
 
       - name: Scan container image with Trivy
