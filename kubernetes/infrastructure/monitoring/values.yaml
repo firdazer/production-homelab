@@ -4,7 +4,19 @@
 fullnameOverride: monitoring
 
 alertmanager:
-  enabled: false
+  enabled: true
+  alertmanagerSpec:
+    configSecret: alertmanager-telegram-config
+    replicas: 1
+    nodeSelector:
+      kubernetes.io/hostname: k3s-w01
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
 
 grafana:
   enabled: true
