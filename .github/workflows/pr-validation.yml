@@ -1,0 +1,47 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Required PR Validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check Git whitespace errors
+        run: |
+          git fetch --no-tags origin main
+          git diff --check origin/main...HEAD
+
+      - name: Validate Kubernetes YAML
+        run: |
+          python3 -m pip install --user --break-system-packages \
+            PyYAML==6.0.2
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          files = sorted(Path("kubernetes").rglob("*.yaml"))
+          files += sorted(Path("kubernetes").rglob("*.yml"))
+
+          assert files, "No Kubernetes YAML files found"
+
+          for path in files:
+              list(yaml.safe_load_all(path.read_text()))
+              print(f"PASS: {path}")
+
+          print(f"Validated {len(files)} Kubernetes YAML files")
+          PY
