@@ -8,9 +8,6 @@ on:
       - ".github/workflows/kubernetes-ci.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "kubernetes/**"
-      - ".github/workflows/kubernetes-ci.yml"
   workflow_dispatch:
 
 permissions:
@@ -46,6 +43,7 @@ jobs:
           /tmp/kubeconform -strict -summary \
             kubernetes/apps/web-demo/deployment.yaml \
             kubernetes/apps/web-demo/networkpolicy.yaml \
+            kubernetes/apps/web-demo/pdb.yaml \
             kubernetes/apps/web-demo/service.yaml
 
       - name: Check Kubernetes manifest structure
