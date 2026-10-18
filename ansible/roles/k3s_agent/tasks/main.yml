@@ -48,12 +48,29 @@
       - k3s_agent_sha256 | length == 64
     fail_msg: "K3s checksum not found. Installation stopped."
 
+- name: Calculate installed K3s binary checksum
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+    checksum_algorithm: sha256
+    get_checksum: true
+  register: k3s_installed_binary
+
+- name: Determine whether K3s binary installation is needed
+  ansible.builtin.set_fact:
+    k3s_binary_install_needed: >-
+      {{
+        not k3s_installed_binary.stat.exists
+        or (k3s_installed_binary.stat.checksum | default(''))
+           != k3s_agent_sha256
+      }}
+
 - name: Download verified K3s binary
   ansible.builtin.get_url:
     url: "https://github.com/k3s-io/k3s/releases/download/{{ k3s_version | urlencode }}/k3s"
     dest: /usr/local/src/k3s-verified
     checksum: "sha256:{{ k3s_agent_sha256 }}"
     mode: "0755"
+  when: k3s_binary_install_needed | bool
 
 - name: Install verified K3s binary
   ansible.builtin.copy:
@@ -63,7 +80,8 @@
     owner: root
     group: root
     mode: "0755"
-
+  when: k3s_binary_install_needed | bool
+  notify: Restart K3s agent
 - name: Read cluster join token securely
   ansible.builtin.slurp:
     src: /var/lib/rancher/k3s/server/node-token
@@ -91,7 +109,7 @@
       token: "{{ k3s_join_token.content | b64decode | trim }}"
       node-ip: "192.168.100.32"
   no_log: true
-
+  notify: Restart K3s agent
 - name: Create K3s agent systemd service
   ansible.builtin.copy:
     dest: /etc/systemd/system/k3s-agent.service
@@ -116,7 +134,7 @@
 
       [Install]
       WantedBy=multi-user.target
-
+  notify: Restart K3s agent
 - name: Enable and start K3s worker
   ansible.builtin.systemd_service:
     name: k3s-agent

@@ -1,0 +1,18 @@
+---
+- name: Warn when K3s agent restart is not approved
+  ansible.builtin.debug:
+    msg: >-
+      K3s agent configuration or binary changed, but restart was not
+      approved. Running configuration may differ from files on disk.
+      Schedule a maintenance window and rerun with
+      k3s_allow_restart=true after reviewing the changes.
+  when: not (k3s_allow_restart | default(false) | bool)
+  listen: Restart K3s agent
+
+- name: Restart K3s agent when approved
+  ansible.builtin.systemd_service:
+    name: k3s-agent
+    daemon_reload: true
+    state: restarted
+  when: k3s_allow_restart | default(false) | bool
+  listen: Restart K3s agent
