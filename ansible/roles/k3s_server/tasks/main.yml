@@ -14,14 +14,6 @@
   ansible.builtin.debug:
     msg: "K3s binary present: {{ k3s_server_binary.stat.exists }}"
 
-- name: Download official K3s installer
-  ansible.builtin.get_url:
-    url: https://get.k3s.io
-    dest: /usr/local/src/install-k3s.sh
-    mode: "0755"
-    owner: root
-    group: root
-
 - name: Download K3s AMD64 checksums
   ansible.builtin.get_url:
     url: "https://github.com/k3s-io/k3s/releases/download/{{ k3s_version | urlencode }}/sha256sum-amd64.txt"
@@ -50,12 +42,29 @@
       - k3s_binary_sha256 | length == 64
     fail_msg: "Unable to identify K3s AMD64 checksum. Installation stopped."
 
+- name: Calculate installed K3s server binary checksum
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+    checksum_algorithm: sha256
+    get_checksum: true
+  register: k3s_installed_server_binary
+
+- name: Determine whether K3s server binary installation is needed
+  ansible.builtin.set_fact:
+    k3s_server_install_needed: >-
+      {{
+        not k3s_installed_server_binary.stat.exists
+        or (k3s_installed_server_binary.stat.checksum | default(''))
+           != k3s_binary_sha256
+      }}
+
 - name: Download and verify pinned K3s binary
   ansible.builtin.get_url:
     url: "https://github.com/k3s-io/k3s/releases/download/{{ k3s_version | urlencode }}/k3s"
     dest: /usr/local/src/k3s-verified
     checksum: "sha256:{{ k3s_binary_sha256 }}"
     mode: "0755"
+  when: k3s_server_install_needed | bool
 
 - name: Install verified K3s binary
   ansible.builtin.copy:
@@ -65,6 +74,8 @@
     owner: root
     group: root
     mode: "0755"
+  when: k3s_server_install_needed | bool
+  notify: Restart K3s server
 
 - name: Create K3s configuration directory
   ansible.builtin.file:
@@ -89,6 +100,7 @@
       secrets-encryption: true
       disable:
         - servicelb
+  notify: Restart K3s server
 
 - name: Create K3s server systemd service
   ansible.builtin.copy:
@@ -115,6 +127,7 @@
       [Install]
       WantedBy=multi-user.target
   register: k3s_service_unit
+  notify: Restart K3s server
 
 - name: Enable and start K3s control plane
   ansible.builtin.systemd_service:

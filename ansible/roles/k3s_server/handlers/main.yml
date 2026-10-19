@@ -1,0 +1,17 @@
+---
+- name: Warn when K3s server restart is not approved
+  ansible.builtin.debug:
+    msg: >-
+      K3s control-plane configuration or binary changed.
+      Restart was not approved. Running configuration may
+      differ from files on disk. Schedule a maintenance window.
+  when: not (k3s_server_allow_restart | default(false) | bool)
+  listen: Restart K3s server
+
+- name: Restart K3s server when approved
+  ansible.builtin.systemd_service:
+    name: k3s
+    daemon_reload: true
+    state: restarted
+  when: k3s_server_allow_restart | default(false) | bool
+  listen: Restart K3s server
